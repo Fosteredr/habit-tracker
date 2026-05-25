@@ -3,7 +3,8 @@ import { Plus, Trash2, Heart, Award, LogOut, BookOpen } from 'lucide-react';
 
 //const API_URL = 'http://localhost:5000/api';
 //const API_URL = 'http://192.168.56.1';
-const API_URL = 'https://early-carpets-sip.loca.lt/api'
+//const API_URL = 'https://early-carpets-sip.loca.lt/api'
+const API_URL = 'https://vercel.com/foster-s-projects1/habit-tracker/4ZUZVu5pQaGdZWMQEbFdaFgVkDxa'
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')) || null);
