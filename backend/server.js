@@ -19,13 +19,26 @@ app.use('/api/reflections', require('./routes/reflections'));
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/habit_tracker_db';
 
-mongoose.connect(MONGO_URI)
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
   .then(() => console.log('Успішне підключення до MongoDB (NoSQL БД)'))
   .catch(err => console.error('Помилка підключення до бази даних:', err));
 
 // Базовий тестовий маршрут для перевірки працездатності сервера
 app.get('/', (req, res) => {
   res.json({ message: 'API сервера систем самоменеджменту працює в штатному режимі.' });
+});
+
+// глобальний error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+
+  res.status(500).json({
+    message: 'Внутрішня помилка сервера',
+    error: err.message
+  });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
