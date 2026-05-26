@@ -80,4 +80,39 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+//5. Редагувати звичку
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const { title, frequency } = req.body;
+
+    const updatedHabit = await Habit.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        userId: req.user.id
+      },
+      {
+        title,
+        frequency
+      },
+      {
+        new: true
+      }
+    );
+
+    if (!updatedHabit) {
+      return res.status(404).json({
+        message: 'Звичку не знайдено'
+      });
+    }
+
+    res.json(updatedHabit);
+
+  } catch (err) {
+    res.status(500).json({
+      message: 'Помилка оновлення звички',
+      error: err.message
+    });
+  }
+});
+
 module.exports = router;
