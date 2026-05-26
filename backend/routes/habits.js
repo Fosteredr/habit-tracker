@@ -45,7 +45,7 @@ router.post('/:id/toggle', auth, async (req, res) => {
       return res.status(400).json({ message: 'Дата не вказана' });
     }
 
-    const habit = await Habit.findOne({ _id: req.id, userId: req.user.id });
+    const habit = await Habit.findOne({ _id: req.params.id, userId: req.user.id });
     if (!habit) {
       return res.status(404).json({ message: 'Звичку не знайдено' });
     }
@@ -70,7 +70,7 @@ router.post('/:id/toggle', auth, async (req, res) => {
 // 4. Видалити звичку (DELETE /api/habits/:id)
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const habit = await Habit.findOneAndDelete({ _id: req.id, userId: req.user.id });
+    const habit = await Habit.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
     if (!habit) {
       return res.status(404).json({ message: 'Звичку не знайдено або доступ заборонено' });
     }
