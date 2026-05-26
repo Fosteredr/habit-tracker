@@ -34,7 +34,7 @@ router.post('/', auth, async (req, res) => {
   try {
     const { moodScore, note, date } = req.body;
 
-    if (!moodScore || !date) {
+    if if (moodScore === undefined || !date) {
       return res.status(400).json({ message: 'Оцінка настрою та дата є обов’язковими' });
     }
 
