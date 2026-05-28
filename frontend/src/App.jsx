@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, Heart, Award, LogOut, BookOpen, Pencil } from 'lucide-react';
 
-// Базова адреса API
-const API_URL = 'https://habit-tracker-inky-seven.vercel.app/api';
+// Базова адреса API бере значення з env, а не з хардкоду
+const API_URL = import.meta.env.VITE_API_URL || 'https://habit-tracker-inky-seven.vercel.app/api';
 
-const getTodayStr = () => new Date().toLocaleDateString('sv-SE');
-
-// Безпечне обрізання дати до YYYY-MM-DD
+// Безпечне приведення дати до YYYY-MM-DD
 const normalizeDate = (value) => String(value || '').slice(0, 10);
+
+// Поточна дата у локальному форматі
+const getTodayStr = () => new Date().toLocaleDateString('sv-SE');
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
@@ -15,6 +16,7 @@ export default function App() {
   const [isRegister, setIsRegister] = useState(false);
   const [authForm, setAuthForm] = useState({ name: '', email: '', password: '' });
   const [authError, setAuthError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [habits, setHabits] = useState([]);
   const [reflections, setReflections] = useState([]);
   const [analytics, setAnalytics] = useState([]);
@@ -23,6 +25,32 @@ export default function App() {
   const [note, setNote] = useState('');
 
   const todayStr = getTodayStr();
+
+  // Єдиний helper для авторизованих запитів
+  const authRequest = async (path, options = {}) => {
+    const res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const raw = await res.text();
+    let data = null;
+
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      data = { message: raw };
+    }
+
+    if (!res.ok) {
+      throw new Error(data?.message || `HTTP ${res.status}`);
+    }
+
+    return data;
+  };
 
   // Завантаження даних після входу
   useEffect(() => {
@@ -35,60 +63,47 @@ export default function App() {
 
   const fetchHabits = async () => {
     try {
-      const res = await fetch(`${API_URL}/habits`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setHabits(data);
-      }
+      const data = await authRequest('/habits');
+      setHabits(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error(err);
+      console.error('FETCH HABITS ERROR:', err);
+      setActionError(err.message || 'Не вдалося завантажити звички.');
     }
   };
 
   const fetchReflections = async () => {
     try {
-      const res = await fetch(`${API_URL}/reflections`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const data = await authRequest('/reflections');
+      setReflections(Array.isArray(data) ? data : []);
 
-      if (res.ok) {
-        const data = await res.json();
-        setReflections(data);
+      const todayRef = (Array.isArray(data) ? data : []).find(
+        (r) => normalizeDate(r.date) === todayStr
+      );
 
-        // Шукаємо сьогоднішню рефлексію без проблеми з форматом дати
-        const todayRef = data.find((r) => normalizeDate(r.date) === todayStr);
-
-        if (todayRef) {
-          setMoodScore(todayRef.moodScore);
-          setNote(todayRef.note || '');
-        }
+      if (todayRef) {
+        setMoodScore(todayRef.moodScore || 0);
+        setNote(todayRef.note || '');
       }
     } catch (err) {
-      console.error(err);
+      console.error('FETCH REFLECTIONS ERROR:', err);
+      setActionError(err.message || 'Не вдалося завантажити рефлексії.');
     }
   };
 
   const fetchAnalytics = async () => {
     try {
-      const res = await fetch(`${API_URL}/reflections/analytics`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setAnalytics(data);
-      }
+      const data = await authRequest('/reflections/analytics');
+      setAnalytics(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error(err);
+      console.error('FETCH ANALYTICS ERROR:', err);
+      setActionError(err.message || 'Не вдалося завантажити статистику.');
     }
   };
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
+    setActionError('');
 
     const endpoint = isRegister ? 'register' : 'login';
 
@@ -133,43 +148,45 @@ export default function App() {
     setMoodScore(0);
     setNote('');
     setNewHabitTitle('');
+    setAuthError('');
+    setActionError('');
   };
 
   const handleAddHabit = async (e) => {
     e.preventDefault();
+    setActionError('');
 
-    if (!newHabitTitle.trim()) return;
+    const title = newHabitTitle.trim();
+    if (!title) return;
 
     try {
-      const res = await fetch(`${API_URL}/habits`, {
+      await authRequest('/habits', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title: newHabitTitle }),
+        body: JSON.stringify({ title }),
       });
 
-      if (res.ok) {
-        setNewHabitTitle('');
-        fetchHabits();
-      }
+      setNewHabitTitle('');
+      fetchHabits();
     } catch (err) {
-      console.error(err);
+      console.error('ADD HABIT ERROR:', err);
+      setActionError(err.message || 'Не вдалося додати звичку.');
     }
   };
 
   const handleEditHabit = async (habit) => {
     const newTitle = window.prompt('Нова назва звички:', habit.title);
-
     if (!newTitle || !newTitle.trim()) return;
 
+    setActionError('');
+
     try {
-      const res = await fetch(`${API_URL}/habits/${habit._id}`, {
+      await authRequest(`/habits/${habit._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: newTitle.trim(),
@@ -177,47 +194,46 @@ export default function App() {
         }),
       });
 
-      if (res.ok) {
-        fetchHabits();
-      }
+      fetchHabits();
     } catch (err) {
-      console.error(err);
+      console.error('EDIT HABIT ERROR:', err);
+      setActionError(err.message || 'Не вдалося редагувати звичку.');
     }
   };
 
   const handleToggleHabit = async (id) => {
+    setActionError('');
+
     try {
-      const res = await fetch(`${API_URL}/habits/${id}/toggle`, {
+      await authRequest(`/habits/${id}/toggle`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ date: todayStr }),
       });
 
-      if (res.ok) {
-        fetchHabits();
-      }
+      fetchHabits();
     } catch (err) {
-      console.error(err);
+      console.error('TOGGLE HABIT ERROR:', err);
+      setActionError(err.message || 'Не вдалося змінити статус звички.');
     }
   };
 
   const handleDeleteHabit = async (id) => {
     if (!window.confirm('Видалити цю звичку?')) return;
 
+    setActionError('');
+
     try {
-      const res = await fetch(`${API_URL}/habits/${id}`, {
+      await authRequest(`/habits/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (res.ok) {
-        fetchHabits();
-      }
+      fetchHabits();
     } catch (err) {
-      console.error(err);
+      console.error('DELETE HABIT ERROR:', err);
+      setActionError(err.message || 'Не вдалося видалити звичку.');
     }
   };
 
@@ -227,12 +243,13 @@ export default function App() {
       return;
     }
 
+    setActionError('');
+
     try {
-      const res = await fetch(`${API_URL}/reflections`, {
+      await authRequest('/reflections', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           moodScore,
@@ -241,17 +258,16 @@ export default function App() {
         }),
       });
 
-      if (res.ok) {
-        alert('Рефлексію збережено!');
-        fetchReflections();
-        fetchAnalytics();
-      }
+      alert('Рефлексію збережено!');
+      fetchReflections();
+      fetchAnalytics();
     } catch (err) {
-      console.error(err);
+      console.error('SAVE REFLECTION ERROR:', err);
+      setActionError(err.message || 'Не вдалося зберегти рефлексію.');
     }
   };
 
-  // Маленька локальна статистика
+  // Локальна статистика для швидкого відображення
   const averageMood = useMemo(() => {
     if (!reflections.length) return 0;
     const sum = reflections.reduce((acc, item) => acc + Number(item.moodScore || 0), 0);
@@ -335,7 +351,7 @@ export default function App() {
     );
   }
 
-  // Головний екран
+  // Основний дашборд
   return (
     <div className="dashboard">
       <div className="header">
@@ -361,8 +377,13 @@ export default function App() {
         </button>
       </div>
 
+      {actionError && (
+        <p style={{ color: '#ef4444', marginBottom: '16px', fontWeight: 600 }}>
+          {actionError}
+        </p>
+      )}
+
       <div className="grid">
-        {/* Ліва колонка */}
         <div>
           <div className="card">
             <h2 className="card-title">
@@ -443,9 +464,8 @@ export default function App() {
             )}
           </div>
 
-          <div className="card" style={{ marginTop: '20px' }}>
+          <div className="card">
             <h2 className="card-title">Коротка статистика</h2>
-
             <p>Звичок виконано сьогодні: <strong>{completedTodayCount}</strong></p>
             <p>Усього звичок: <strong>{habits.length}</strong></p>
             <p>Середній настрій: <strong>{averageMood}</strong></p>
@@ -453,7 +473,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Права колонка */}
         <div>
           <div className="card">
             <h2 className="card-title">
@@ -506,7 +525,7 @@ export default function App() {
             </button>
           </div>
 
-          <div className="card" style={{ marginTop: '20px' }}>
+          <div className="card">
             <h2 className="card-title">Останні 7 днів рефлексії</h2>
 
             {recentAnalytics.length === 0 ? (
