@@ -5,42 +5,47 @@ require('dotenv').config();
 
 const app = express();
 
-// Мідлвари для обробки форматів даних
+// Базові мідлвари
 app.use(cors());
 app.use(express.json());
 
-// Підключення модулів маршрутизації API
+// Підключення маршрутів API
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/habits', require('./routes/habits'));
 app.use('/api/reflections', require('./routes/reflections'));
 
-
-// Параметри підключення до NoSQL бази даних MongoDB
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/habit_tracker_db';
-
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-  .then(() => console.log('Успішне підключення до MongoDB (NoSQL БД)'))
-  .catch(err => console.error('Помилка підключення до бази даних:', err));
-
-// Базовий тестовий маршрут для перевірки працездатності сервера
+// Перевірка доступності сервера
 app.get('/', (req, res) => {
-  res.json({ message: 'API сервера систем самоменеджменту працює в штатному режимі.' });
+  res.json({ message: 'API сервера системи самоменеджменту працює.' });
 });
 
-// глобальний error handler
+const PORT = process.env.PORT || 5000;
+const MONGO_URI =
+  process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/habit_tracker_db';
+
+// Підключення до MongoDB
+mongoose
+  .connect(MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log('Успішне підключення до MongoDB'))
+  .catch((err) => console.error('Помилка підключення до бази даних:', err));
+
+// Єдиний обробник помилок
 app.use((err, req, res, next) => {
   console.error(err.stack);
-
   res.status(500).json({
     message: 'Внутрішня помилка сервера',
-    error: err.message
+    error: err.message,
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Сервер успішно запущено на порту ${PORT}`);
-});
+// Локальний запуск
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Сервер успішно запущено на порту ${PORT}`);
+  });
+}
+
+module.exports = app;
