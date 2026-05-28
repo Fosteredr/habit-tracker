@@ -1,14 +1,35 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Habit = require('../models/Habit');
 const auth = require('../middleware/auth');
 
+// Переконуємось, що база підключена
+const ensureDbConnection = async () => {
+  if (mongoose.connection.readyState === 1) return;
+
+  if (!process.env.MONGO_URI) {
+    throw new Error('MONGO_URI не знайдено у змінних середовища');
+  }
+
+  await mongoose.connect(process.env.MONGO_URI);
+};
+
 // Отримати всі звички поточного користувача
 router.get('/', auth, async (req, res) => {
   try {
+    await ensureDbConnection();
+
+    if (!req.user?.id) {
+      return res.status(401).json({
+        message: 'Користувача не авторизовано',
+      });
+    }
+
     const habits = await Habit.find({ userId: req.user.id }).sort({ createdAt: -1 });
     res.json(habits);
   } catch (err) {
+    console.error('GET HABITS ERROR:', err);
     res.status(500).json({
       message: 'Помилка отримання звичок',
       error: err.message,
@@ -19,6 +40,14 @@ router.get('/', auth, async (req, res) => {
 // Створити нову звичку
 router.post('/', auth, async (req, res) => {
   try {
+    await ensureDbConnection();
+
+    if (!req.user?.id) {
+      return res.status(401).json({
+        message: 'Користувача не авторизовано',
+      });
+    }
+
     const title = String(req.body.title || '').trim();
     const frequency = String(req.body.frequency || 'щоденно').trim();
 
@@ -28,16 +57,16 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    const newHabit = new Habit({
+    const newHabit = await Habit.create({
       userId: req.user.id,
       title,
       frequency,
       history: [],
     });
 
-    const savedHabit = await newHabit.save();
-    res.status(201).json(savedHabit);
+    res.status(201).json(newHabit);
   } catch (err) {
+    console.error('CREATE HABIT ERROR:', err);
     res.status(500).json({
       message: 'Помилка створення звички',
       error: err.message,
@@ -48,6 +77,14 @@ router.post('/', auth, async (req, res) => {
 // Оновити звичку
 router.put('/:id', auth, async (req, res) => {
   try {
+    await ensureDbConnection();
+
+    if (!req.user?.id) {
+      return res.status(401).json({
+        message: 'Користувача не авторизовано',
+      });
+    }
+
     const title = String(req.body.title || '').trim();
     const frequency = String(req.body.frequency || 'щоденно').trim();
 
@@ -58,9 +95,17 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     const updatedHabit = await Habit.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
-      { title, frequency },
-      { new: true }
+      {
+        _id: req.params.id,
+        userId: req.user.id,
+      },
+      {
+        title,
+        frequency,
+      },
+      {
+        new: true,
+      }
     );
 
     if (!updatedHabit) {
@@ -71,6 +116,7 @@ router.put('/:id', auth, async (req, res) => {
 
     res.json(updatedHabit);
   } catch (err) {
+    console.error('UPDATE HABIT ERROR:', err);
     res.status(500).json({
       message: 'Помилка оновлення звички',
       error: err.message,
@@ -81,6 +127,14 @@ router.put('/:id', auth, async (req, res) => {
 // Відмітити або скасувати виконання
 router.post('/:id/toggle', auth, async (req, res) => {
   try {
+    await ensureDbConnection();
+
+    if (!req.user?.id) {
+      return res.status(401).json({
+        message: 'Користувача не авторизовано',
+      });
+    }
+
     const date = String(req.body.date || '').trim();
 
     if (!date) {
@@ -100,7 +154,6 @@ router.post('/:id/toggle', auth, async (req, res) => {
       });
     }
 
-    // Гарантуємо, що history завжди масив
     habit.history = Array.isArray(habit.history) ? habit.history : [];
 
     const index = habit.history.indexOf(date);
@@ -115,6 +168,7 @@ router.post('/:id/toggle', auth, async (req, res) => {
 
     res.json(habit);
   } catch (err) {
+    console.error('TOGGLE HABIT ERROR:', err);
     res.status(500).json({
       message: 'Помилка оновлення статусу звички',
       error: err.message,
@@ -125,6 +179,14 @@ router.post('/:id/toggle', auth, async (req, res) => {
 // Видалити звичку
 router.delete('/:id', auth, async (req, res) => {
   try {
+    await ensureDbConnection();
+
+    if (!req.user?.id) {
+      return res.status(401).json({
+        message: 'Користувача не авторизовано',
+      });
+    }
+
     const habit = await Habit.findOneAndDelete({
       _id: req.params.id,
       userId: req.user.id,
@@ -138,6 +200,7 @@ router.delete('/:id', auth, async (req, res) => {
 
     res.json({ message: 'Звичку успішно видалено' });
   } catch (err) {
+    console.error('DELETE HABIT ERROR:', err);
     res.status(500).json({
       message: 'Помилка видалення звички',
       error: err.message,
