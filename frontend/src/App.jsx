@@ -26,31 +26,32 @@ export default function App() {
 
   const todayStr = getTodayStr();
 
-  // Єдиний helper для авторизованих запитів
-  const authRequest = async (path, options = {}) => {
-    const res = await fetch(`${API_URL}${path}`, {
-      ...options,
-      headers: {
-        ...(options.headers || {}),
-        Authorization: `Bearer ${token}`,
-      },
-    });
+ // Єдиний helper для авторизованих запитів
+const authRequest = async (path, options = {}) => {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
-    const raw = await res.text();
-    let data = null;
+  const raw = await res.text();
+  let data = null;
 
-    try {
-      data = raw ? JSON.parse(raw) : null;
-    } catch {
-      data = { message: raw };
-    }
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {
+    data = { message: raw };
+  }
 
-    if (!res.ok) {
-      throw new Error(data?.message || `HTTP ${res.status}`);
-    }
+  if (!res.ok) {
+    const details = data?.error ? `: ${data.error}` : '';
+    throw new Error((data?.message || `HTTP ${res.status}`) + details);
+  }
 
-    return data;
-  };
+  return data;
+};
 
   // Завантаження даних після входу
   useEffect(() => {
