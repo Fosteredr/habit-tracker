@@ -1,22 +1,35 @@
 const mongoose = require('mongoose');
 
-// Опис структури документа користувача у NoSQL базі даних
-const UserSchema = new mongoose.Schema({
-  name: { 
-    type: String, 
-    required: true 
+// Схема користувача
+const UserSchema = new mongoose.Schema(
+  {
+    // Ім'я користувача
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+
+    // Електронна пошта, унікальна для кожного акаунта
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 255,
+    },
+
+    // Хеш пароля, а не відкритий пароль
+    passwordHash: {
+      type: String,
+      required: true,
+    },
   },
-  email: { 
-    type: String, 
-    required: true, 
-    unique: true // Забороняє реєстрацію дублікатів пошт
-  },
-  passwordHash: { 
-    type: String, 
-    required: true // Тут зберігатиметься безпечний хеш пароля, а не чистий текст
+  {
+    timestamps: true, // Додає createdAt та updatedAt
   }
-}, { 
-  timestamps: true // Автоматично додає поля createdAt та updatedAt (час створення/оновлення)
-});
+);
 
 module.exports = mongoose.model('User', UserSchema);
