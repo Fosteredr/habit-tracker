@@ -1,9 +1,26 @@
 const express = require('express');
-const router = express.Router();
+const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { connectDB } = require('../utils/db');
+
+const router = express.Router();
+
+// CORS для auth-роутів
+const corsOptions = {
+  origin: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
+};
+
+router.use(cors(corsOptions));
+
+// Явні preflight-обробники
+router.options('/login', cors(corsOptions));
+router.options('/register', cors(corsOptions));
+router.options('/ping', cors(corsOptions));
 
 // Тестовий маршрут
 router.get('/ping', (req, res) => {
@@ -11,12 +28,14 @@ router.get('/ping', (req, res) => {
   res.json({ ok: true, service: 'auth' });
 });
 
-// Реєстрація нового користувача
-router.post('/register', async (req, res) => {
+// Реєстрація
+router.post('/register', cors(corsOptions), async (req, res) => {
   try {
     const name = String(req.body.name || '').trim();
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = String(req.body.password || '');
+
+    console.log('REGISTER ATTEMPT:', email);
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -54,14 +73,18 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Вхід у систему
-router.post('/login', async (req, res) => {
+// Вхід
+router.post('/login', cors(corsOptions), async (req, res) => {
   try {
     // Спочатку оголошуємо змінні
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = String(req.body.password || '');
 
+    // Лог для перевірки, чи запит дійшов сюди
     console.log('LOGIN ATTEMPT:', email);
+    console.log('BODY:', req.body);
+    console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+    console.log('MONGO_URI exists:', !!process.env.MONGO_URI);
 
     if (!email || !password) {
       return res.status(400).json({
