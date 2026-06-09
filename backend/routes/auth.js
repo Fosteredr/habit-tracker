@@ -107,3 +107,9 @@ router.post('/login', async (req, res) => {
 });
 
 module.exports = router;
+
+// Тестовий маршрут для перевірки зв'язку
+router.get('/ping', (req, res) => {
+  console.log('PING /api/auth/ping');
+  res.json({ ok: true, service: 'auth' });
+});
