@@ -1,27 +1,9 @@
 const express = require('express');
-const cors = require('cors');
+const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { connectDB } = require('../utils/db');
-
-const router = express.Router();
-
-// CORS для auth-роутів
-const corsOptions = {
-  origin: true, // віддзеркалює origin запиту
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 204,
-};
-
-// Додаємо CORS до всіх auth-роутів
-router.use(cors(corsOptions));
-
-// Явні preflight-обробники
-router.options('/login', cors(corsOptions));
-router.options('/register', cors(corsOptions));
-router.options('/ping', cors(corsOptions));
 
 // Тестовий маршрут
 router.get('/ping', (req, res) => {
@@ -30,10 +12,8 @@ router.get('/ping', (req, res) => {
 });
 
 // Реєстрація нового користувача
-router.post('/register', cors(corsOptions), async (req, res) => {
+router.post('/register', async (req, res) => {
   try {
-    await connectDB();
-
     const name = String(req.body.name || '').trim();
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = String(req.body.password || '');
@@ -43,6 +23,8 @@ router.post('/register', cors(corsOptions), async (req, res) => {
         message: 'Будь ласка, заповніть усі обов’язкові поля.',
       });
     }
+
+    await connectDB();
 
     const candidate = await User.findOne({ email });
     if (candidate) {
@@ -73,27 +55,26 @@ router.post('/register', cors(corsOptions), async (req, res) => {
 });
 
 // Вхід у систему
-router.post('/login', cors(corsOptions), async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
-    await connectDB();
+    // Спочатку оголошуємо змінні
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
 
-    console.log('LOGIN ATTEMPT:', req.body.email);
-    console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
-    console.log('MONGO_URI exists:', !!process.env.MONGO_URI);
+    console.log('LOGIN ATTEMPT:', email);
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: 'Будь ласка, введіть email та пароль.',
+      });
+    }
+
+    await connectDB();
 
     if (!process.env.JWT_SECRET) {
       return res.status(500).json({
         message: 'Помилка конфігурації сервера',
         error: 'JWT_SECRET не знайдено',
-      });
-    }
-
-    const email = String(req.body.email || '').trim().toLowerCase();
-    const password = String(req.body.password || '');
-
-    if (!email || !password) {
-      return res.status(400).json({
-        message: 'Будь ласка, введіть email та пароль.',
       });
     }
 
