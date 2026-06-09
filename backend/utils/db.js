@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// Кешуємо підключення, щоб не створювати нове на кожен запит
+// Кешуємо підключення, щоб не відкривати нове на кожен запит
 let cached = global.mongooseCache;
 
 if (!cached) {
