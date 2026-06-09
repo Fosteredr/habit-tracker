@@ -51,6 +51,11 @@ router.post('/register', async (req, res) => {
 // Вхід
 router.post('/login', async (req, res) => {
   try {
+    
+    console.log('LOGIN ATTEMPT:', email);
+    console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+    console.log('MONGO_URI exists:', !!process.env.MONGO_URI);
+    
     await connectDB();
 
     if (!process.env.JWT_SECRET) {
