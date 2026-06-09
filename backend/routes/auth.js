@@ -3,10 +3,13 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { connectDB } = require('../utils/db');
 
-// Реєстрація нового користувача
+// Реєстрація
 router.post('/register', async (req, res) => {
   try {
+    await connectDB();
+
     const name = String(req.body.name || '').trim();
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = String(req.body.password || '');
@@ -27,13 +30,11 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const newUser = new User({
+    await User.create({
       name,
       email,
       passwordHash,
     });
-
-    await newUser.save();
 
     res.status(201).json({
       message: 'Користувача успішно зареєстровано в системі.',
@@ -47,21 +48,24 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Вхід у систему
+// Вхід
 router.post('/login', async (req, res) => {
   try {
+    await connectDB();
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({
+        message: 'Помилка конфігурації сервера',
+        error: 'JWT_SECRET не знайдено',
+      });
+    }
+
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = String(req.body.password || '');
 
     if (!email || !password) {
       return res.status(400).json({
         message: 'Будь ласка, введіть email та пароль.',
-      });
-    }
-
-    if (!process.env.JWT_SECRET) {
-      return res.status(500).json({
-        message: 'Помилка конфігурації сервера',
       });
     }
 
