@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://habit-tracker-inky-seven.vercel.app/api/$1"
+    }
+  ]
+}
