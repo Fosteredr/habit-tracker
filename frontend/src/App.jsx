@@ -3,7 +3,7 @@ import { Plus, Trash2, Heart, Award, LogOut, BookOpen, Pencil } from 'lucide-rea
 
 // Базова адреса API бере значення з env, а не з хардкоду
 //const API_URL = import.meta.env.VITE_API_URL || '/api';
-const API_URL = import.meta.env.VITE_API_URL || 'https://habit-tracker-5rdczuxhw-foster-s-projects1.vercel.app/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://habit-tracker-jygvym5lc-foster-s-projects1.vercel.app/api';
 // Безпечне приведення дати до YYYY-MM-DD
 const normalizeDate = (value) => String(value || '').slice(0, 10);
 
