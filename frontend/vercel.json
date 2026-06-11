@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "https://habit-tracker-5rdczuxhw-foster-s-projects1.vercel.app/api/$1"
-    }
-  ]
-}
